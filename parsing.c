@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -33,6 +34,9 @@ long eval_op(long x, char* op, long y) {
   if (strcmp(op, "*") == 0) { return x * y; }
   if (strcmp(op, "/") == 0) { return x / y; }
   if (strcmp(op, "%") == 0) { return x % y; }
+  if (strcmp(op, "^") == 0) { return pow(x, y); }
+  if (strcmp(op, "min") == 0) { return x < y ? x : y; }
+  if (strcmp(op, "max") == 0) { return x < y ? y : x; }
   return 0;
 }
 
@@ -42,9 +46,8 @@ long eval(mpc_ast_t* t) {
   }
 
   char* op = t->children[1]->contents;
-
+  
   long x = eval(t->children[2]);
-
   int i = 3;
   while (strstr(t->children[i]->tag, "expr")) {
     x = eval_op(x, op, eval(t->children[i]));
@@ -61,12 +64,13 @@ int main(int argc, char** argv) {
   mpc_parser_t* Expr     = mpc_new("expr");
   mpc_parser_t* Lispy    = mpc_new("lispy");
   
+  //operator : '+' | '-' | '*' | '/' | '%' | '^' ;  
   mpca_lang(MPCA_LANG_DEFAULT,
-    "						         \
-      number   : /-?([0-9]+\\.)?[0-9]+/ ;	         \
-      operator : '+' | '-' | '*' | '/' | '%' ;           \
-      expr     : <number> | '(' <operator> <expr>+ ')' ; \
-      lispy    : /^/ <operator> <expr>+ /$/ ;            \
+    "						                           \
+      number   : /-?([0-9]+\\.)?[0-9]+/ ;	                           \
+      operator : '+' | '-' | '*' | '/' | '%' | '^' | \"min\" | \"max\" ;   \
+      expr     : <number> | '(' <operator> <expr>+ ')' ;                   \
+      lispy    : /^/ <operator> <expr>+ /$/ ;                              \
     ",
     Number, Operator, Expr, Lispy);
   
@@ -80,6 +84,7 @@ int main(int argc, char** argv) {
     /* Parse user input */
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
+      //mpc_ast_print(r.output);
       long result = eval(r.output);
       printf("%li\n", result);
       mpc_ast_delete(r.output);
