@@ -28,16 +28,71 @@ void add_history(char* unused) {}
 #include <editline/history.h>
 #endif
 
-long eval_op(long x, char* op, long y) {
-  if (strcmp(op, "+") == 0) { return x + y; }
-  if (strcmp(op, "-") == 0) { return x - y; }
-  if (strcmp(op, "*") == 0) { return x * y; }
-  if (strcmp(op, "/") == 0) { return x / y; }
-  if (strcmp(op, "%") == 0) { return x % y; }
-  if (strcmp(op, "^") == 0) { return pow(x, y); }
-  if (strcmp(op, "min") == 0) { return x < y ? x : y; }
-  if (strcmp(op, "max") == 0) { return x < y ? y : x; }
-  return 0;
+/* Lval types */
+enum { LVAL_NUM, LVAL_ERR };
+
+/* Error types */
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+
+/* Lisp value */
+typedef struct {
+  int type;
+  long num;
+  int err;
+} lval;
+
+lval lval_num(long x) {
+  lval v;
+  v.type = LVAL_NUM;
+  v.num = x;
+  return v;
+}
+
+lval lval_err(int x) {
+  lval v;
+  v.type = LVAL_ERR;
+  v.err = x;
+  return v;
+}
+
+void lval_print(lval v) {
+  switch (v.type) {
+    case LVAL_NUM: printf("%li", v.num); break;
+    case LVAL_ERR:
+      if (v.err == LERR_DIV_ZERO) {
+        printf("Error: Division By Zero!");
+      }
+      if (v.err == LERR_BAD_OP) {
+        printf("Error: Invalid Operator!");
+      }
+      if (v.err == LERR_BAD_NUM) {
+        printf("Error: Invalid Number!");
+      }
+      break;
+  }
+}
+
+void lval_println(lval v) { lval_print(v); putchar('\n'); }
+
+long eval_op(lval x, char* op, lval y) {
+  if (x.type == LVAL_ERR) { return x; }
+  if (y.type == LVAL_ERR) { return y; }
+  
+	
+  if (strcmp(op, "+") == 0) { lval_num(return x.num + y.num); }
+  if (strcmp(op, "-") == 0) { lval_num(return x.num - y.num); }
+  if (strcmp(op, "*") == 0) { lval_num(return x.num * y.num); }
+  if (strcmp(op, "/") == 0) { 
+    return y == 0 
+      ? lval_err(LERR_DIV_ZERO)
+      : lval_num(x.num / y.num); 
+  }
+  if (strcmp(op, "%") == 0) { return lval_num(x.num % y.num); }
+  if (strcmp(op, "^") == 0) { return lval_num(pow(x.num, y.num)); }
+  if (strcmp(op, "min") == 0) { return lval_num(x.num < y.num ? x.num : y.num); }
+  if (strcmp(op, "max") == 0) { return lval_num(x.num < y.num ? y.num : x.num); }
+  
+  return lval_err(LERR_BAD_OP);
 }
 
 long eval(mpc_ast_t* t) {
